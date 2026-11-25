@@ -1,4 +1,4 @@
-🚨 RED ALERT: PROJECT X — THE LEGEND REBORN IN HD! 🚨
+🚨 RED ALERT: PROJECT X — THE LEGEND REBORN IN HD! 
 RED ALERT: PROJECT X — HUYỀN THOẠI BÁO ĐỘNG ĐỎ TÁI XUẤT PHIÊN BẢN HD! 
 
 Remember the golden days of classic base-building, harvesting ore, and unleashing superweapons? Red Alert: Project X (RAPX) brings back the fast-paced, addictive RTS soul you love—completely rebuilt with modern HD 3D graphics on the OpenRA engine!
