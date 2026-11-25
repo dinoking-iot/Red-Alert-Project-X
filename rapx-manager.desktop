@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=script tu dong
+Comment=Chay script tu dong tim vi tri
+Exec=konsole --noclose -e bash -c "cd \"\$(dirname \"%k\")\" && ./rapx-manager.sh"
+Icon=utilities-terminal
+Terminal=false
+Categories=System;Utility;
