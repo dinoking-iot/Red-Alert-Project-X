@@ -1,6 +1,7 @@
 cat << 'EOF' > ~/rapx-manager.sh
 #!/usr/bin/env bash
 
+# Auto-open Terminal on double-click / Tu dong mo Terminal khi click dup
 if [ ! -t 0 ]; then
     SCRIPT_PATH="$(readlink -f "$0")"
     for term in konsole gnome-terminal xfce4-terminal x-terminal-emulator mate-terminal lxterminal tilix alacritty kitty xterm; do
@@ -54,14 +55,15 @@ DEB_OUTPUT="$OUT_DIR/${APP_NAME}_${VERSION}_${DEB_ARCH}.deb"
 APPIMAGE_OUTPUT="$OUT_DIR/Red_Alert_Project_X-${VERSION}-${APPIMAGE_ARCH}.AppImage"
 
 if [ "$EUID" -eq 0 ]; then
-    echo "[LOI] Vui long chay script bang tai khoan user thuong (khong dung root)."
-    read -rp "Nhan Enter de thoat..."
+    echo "[ERROR / LOI] Please run as a normal user (do not use root)."
+    echo "              Vui long chay script bang tai khoan user thuong (khong dung root)."
+    read -rp "Press Enter to exit / Nhan Enter de thoat..."
     exit 1
 fi
 
 install_dotnet_manual() {
     if ! dotnet --list-sdks 2>/dev/null | grep -q "^6\.0\."; then
-        echo "[*] Dang cai dat .NET 6.0 SDK..."
+        echo "[*] Installing .NET 6.0 SDK / Dang cai dat .NET 6.0 SDK..."
         wget -q "$DOTNET_SCRIPT" -O /tmp/dotnet-install.sh
         chmod +x /tmp/dotnet-install.sh
         sudo /tmp/dotnet-install.sh --channel 6.0 --install-dir /usr/share/dotnet
@@ -77,7 +79,8 @@ install_dependencies() {
     else
         DISTRO_ID="unknown"
     fi
-    echo "[*] He dieu hanh phat hien: ${NAME:-Linux} ($DISTRO_ID)"
+    echo "[*] Detected OS / He dieu hanh phat hien: ${NAME:-Linux} ($DISTRO_ID)"
+    echo "[*] Installing dependencies / Dang cai dat thu vien phu thuoc..."
 
     if [[ "$DISTRO_ID" =~ ^(biglinux|manjaro|arch|endeavouros|garuda|cachyos)$ ]] || [[ "$DISTRO_LIKE" == *"arch"* ]]; then
         sudo pacman -Syu --needed --noconfirm git base-devel openal libgl freetype2 sdl2 lua51 dotnet-sdk-6.0 wget unzip rsync dpkg fuse2
@@ -104,11 +107,11 @@ build_source() {
     mkdir -p "$WORK_DIR" "$OUT_DIR"
     cd "$WORK_DIR"
     rm -rf "$SRC_DIR" main.zip
-    echo "[*] Dang tai ma nguon tu: ${REPO_URL}"
+    echo "[*] Downloading source code / Dang tai ma nguon tu: ${REPO_URL}"
     wget -O main.zip "${REPO_URL}/archive/refs/heads/main.zip"
     unzip -q main.zip
     rm -f main.zip
-    echo "[*] Dang bien dich game..."
+    echo "[*] Compiling game / Dang bien dich game..."
     cd "$SRC_DIR"
     make
 }
@@ -144,7 +147,7 @@ StartupNotify=true
 DESKTOP
 
     if command -v dpkg-deb >/dev/null 2>&1; then
-        echo "[*] Dang dong goi file .deb..."
+        echo "[*] Packaging .deb file / Dang dong goi file .deb..."
         mkdir -p "$PKG_DIR/DEBIAN"
         INSTALLED_SIZE=$(du -sk "$PKG_DIR" | cut -f1)
         cat << CONTROL > "$PKG_DIR/DEBIAN/control"
@@ -164,6 +167,7 @@ CONTROL
     fi
 
     if [ "$INSTALL_TO_OS" = "yes" ]; then
+        echo "[*] Installing to system / Dang cai dat vao he thong..."
         if command -v apt-get >/dev/null 2>&1 && [ -f "$DEB_OUTPUT" ]; then
             sudo apt-get install -y "$DEB_OUTPUT"
         else
@@ -174,12 +178,12 @@ CONTROL
             [ -f "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png" ] && sudo cp "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png" /usr/share/icons/hicolor/256x256/apps/
             sudo update-desktop-database /usr/share/applications 2>/dev/null || true
         fi
-        echo "[OK] Da cai dat hoan chinh vao may!"
+        echo "[OK] Installed successfully / Da cai dat hoan chinh vao may!"
     fi
 }
 
 package_appimage() {
-    echo "[*] Dang dong goi file AppImage..."
+    echo "[*] Packaging AppImage / Dang dong goi file AppImage..."
     rm -rf "$APP_DIR"
     mkdir -p "$APP_DIR/usr/share/$APP_NAME" "$APP_DIR/usr/share/dotnet" "$APP_DIR/usr/lib"
     rsync -a "$SRC_DIR/" "$APP_DIR/usr/share/$APP_NAME/"
@@ -231,14 +235,14 @@ DESKTOP
 
     TOOL_BIN="$WORK_DIR/appimagetool-${APPIMAGE_ARCH}.AppImage"
     if [ ! -f "$TOOL_BIN" ]; then
-        echo "[*] Dang tai cong cu appimagetool..."
+        echo "[*] Downloading appimagetool / Dang tai cong cu appimagetool..."
         wget -q "$APPIMAGE_TOOL_URL" -O "$TOOL_BIN"
         chmod +x "$TOOL_BIN"
     fi
 
     RUNTIME_BIN="$WORK_DIR/runtime-${APPIMAGE_ARCH}"
     if [ ! -f "$RUNTIME_BIN" ]; then
-        echo "[*] Dang tai AppImage runtime..."
+        echo "[*] Downloading AppImage runtime / Dang tai AppImage runtime..."
         wget -q "$RUNTIME_URL" -O "$RUNTIME_BIN"
     fi
 
@@ -246,59 +250,67 @@ DESKTOP
     ARCH="$APPIMAGE_ARCH" "$TOOL_BIN" --appimage-extract-and-run --runtime-file "$RUNTIME_BIN" "$APP_DIR" "$APPIMAGE_OUTPUT"
     chmod +x "$APPIMAGE_OUTPUT"
 
-    echo "=========================================================="
-    echo "[THANH CONG] Cac goi da duoc luu tai: $OUT_DIR"
-    [ -f "$DEB_OUTPUT" ] && echo " -> File .deb     : $DEB_OUTPUT"
-    [ -f "$APPIMAGE_OUTPUT" ] && echo " -> File AppImage : $APPIMAGE_OUTPUT"
-    echo "=========================================================="
+    echo "=================================================================="
+    echo "[SUCCESS / THANH CONG] Packages saved at / Cac goi da luu tai:"
+    echo " -> $OUT_DIR"
+    [ -f "$DEB_OUTPUT" ] && echo " -> .deb     : $DEB_OUTPUT"
+    [ -f "$APPIMAGE_OUTPUT" ] && echo " -> AppImage : $APPIMAGE_OUTPUT"
+    echo "=================================================================="
 }
 
 do_uninstall() {
-    echo "[*] Dang go bo hoan toan RAPX khoi may..."
+    echo "[*] Uninstalling RAPX completely / Dang go bo hoan toan RAPX khoi may..."
     if command -v apt-get >/dev/null 2>&1 && dpkg -l 2>/dev/null | grep -qw "$APP_NAME"; then
         sudo apt-get remove --purge -y "$APP_NAME"
     fi
     sudo rm -rf "/opt/$APP_NAME" "/usr/bin/$APP_NAME" "/usr/share/applications/$APP_NAME.desktop" "/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png" "/root/rapx-build"
     rm -rf "$HOME/rapx-build" "$HOME/rapx" "$HOME/.config/openra" "$HOME/.local/share/openra"
     sudo update-desktop-database /usr/share/applications 2>/dev/null || true
-    echo "[OK] Da go bo sach se! (Cac file goi trong $OUT_DIR duoc giu lai)"
+    echo "[OK] Uninstalled cleanly! / Da go bo sach se!"
+    echo "     (Packages in $OUT_DIR are kept / Cac file goi trong $OUT_DIR duoc giu lai)"
 }
 
 while true; do
     clear
-    echo "=========================================================="
+    echo "=================================================================="
     echo "   RAPX UNIVERSAL MANAGER - $APP_TITLE"
-    echo "   User: $USER | Thu muc xuat goi: $OUT_DIR"
-    echo "=========================================================="
-    echo "  1) Cai dat vao may + Xuat goi .deb & .AppImage"
-    echo "  2) Chi bien dich & Xuat goi .deb + .AppImage"
-    echo "  3) Go bo hoan toan game khoi may"
-    echo "  4) Thoat"
-    echo "=========================================================="
-    read -rp "Nhap lua chon cua ban [1-4]: " CHOICE
+    echo "   User: $USER | Output / Thu muc xuat goi: $OUT_DIR"
+    echo "=================================================================="
+    echo "  1) Install to PC + Export .deb & .AppImage"
+    echo "     Cai dat vao may + Xuat goi .deb & .AppImage"
+    echo "  ----------------------------------------------------------------"
+    echo "  2) Build & Export .deb + .AppImage ONLY (No system install)"
+    echo "     Chi bien dich & Xuat goi .deb + .AppImage (Khong cai vao may)"
+    echo "  ----------------------------------------------------------------"
+    echo "  3) Completely uninstall game from PC"
+    echo "     Go bo hoan toan game khoi may"
+    echo "  ----------------------------------------------------------------"
+    echo "  4) Exit / Thoat"
+    echo "=================================================================="
+    read -rp "Enter your choice / Nhap lua chon cua ban [1-4]: " CHOICE
     echo ""
     case "$CHOICE" in
         1)
             build_source
             package_and_install_system "yes"
             package_appimage
-            read -rp "Nhan Enter de quay lai Menu..."
+            read -rp "Press Enter to return to Menu / Nhan Enter de quay lai Menu..."
             ;;
         2)
             build_source
             package_and_install_system "no"
             package_appimage
-            read -rp "Nhan Enter de quay lai Menu..."
+            read -rp "Press Enter to return to Menu / Nhan Enter de quay lai Menu..."
             ;;
         3)
             do_uninstall
-            read -rp "Nhan Enter de quay lai Menu..."
+            read -rp "Press Enter to return to Menu / Nhan Enter de quay lai Menu..."
             ;;
         4)
             exit 0
             ;;
         *)
-            echo "[LOI] Lua chon khong hop le."
+            echo "[ERROR / LOI] Invalid choice / Lua chon khong hop le."
             sleep 1
             ;;
     esac
