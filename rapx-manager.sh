@@ -1,6 +1,6 @@
+cat << 'EOF' > ~/rapx-manager.sh
 #!/usr/bin/env bash
 
-# Tự động mở cửa sổ Terminal nếu click đúp trong trình quản lý tệp
 if [ ! -t 0 ]; then
     SCRIPT_PATH="$(readlink -f "$0")"
     for term in konsole gnome-terminal xfce4-terminal x-terminal-emulator mate-terminal lxterminal tilix alacritty kitty xterm; do
@@ -19,11 +19,10 @@ set -e
 GIT_HOST="github.com"
 REPO_PATH="heshamhabib/rapx"
 REPO_URL="https://${GIT_HOST}/${REPO_PATH}"
-
 DOTNET_HOST="dot.net"
 DOTNET_SCRIPT="https://${DOTNET_HOST}/v1/dotnet-install.sh"
-
 APPIMAGE_REPO="AppImage/appimagetool"
+RUNTIME_REPO="AppImage/type2-runtime"
 GH_REL="releases/download/continuous"
 
 APP_NAME="rapx"
@@ -43,6 +42,7 @@ else
 fi
 
 APPIMAGE_TOOL_URL="https://${GIT_HOST}/${APPIMAGE_REPO}/${GH_REL}/appimagetool-${APPIMAGE_ARCH}.AppImage"
+RUNTIME_URL="https://${GIT_HOST}/${RUNTIME_REPO}/${GH_REL}/runtime-${APPIMAGE_ARCH}"
 
 WORK_DIR="$HOME/rapx-build/workspace"
 SRC_DIR="$WORK_DIR/rapx-main"
@@ -77,8 +77,7 @@ install_dependencies() {
     else
         DISTRO_ID="unknown"
     fi
-
-    echo "[*] He dieu hanh: ${NAME:-Linux} ($DISTRO_ID)"
+    echo "[*] He dieu hanh phat hien: ${NAME:-Linux} ($DISTRO_ID)"
 
     if [[ "$DISTRO_ID" =~ ^(biglinux|manjaro|arch|endeavouros|garuda|cachyos)$ ]] || [[ "$DISTRO_LIKE" == *"arch"* ]]; then
         sudo pacman -Syu --needed --noconfirm git base-devel openal libgl freetype2 sdl2 lua51 dotnet-sdk-6.0 wget unzip rsync dpkg fuse2
@@ -105,16 +104,16 @@ build_source() {
     mkdir -p "$WORK_DIR" "$OUT_DIR"
     cd "$WORK_DIR"
     rm -rf "$SRC_DIR" main.zip
-
     echo "[*] Dang tai ma nguon tu: ${REPO_URL}"
     wget -O main.zip "${REPO_URL}/archive/refs/heads/main.zip"
     unzip -q main.zip
     rm -f main.zip
-
     echo "[*] Dang bien dich game..."
     cd "$SRC_DIR"
     make
 }
+EOF
+cat << 'EOF' >> ~/rapx-manager.sh
 
 package_and_install_system() {
     local INSTALL_TO_OS="$1"
@@ -237,8 +236,14 @@ DESKTOP
         chmod +x "$TOOL_BIN"
     fi
 
+    RUNTIME_BIN="$WORK_DIR/runtime-${APPIMAGE_ARCH}"
+    if [ ! -f "$RUNTIME_BIN" ]; then
+        echo "[*] Dang tai AppImage runtime..."
+        wget -q "$RUNTIME_URL" -O "$RUNTIME_BIN"
+    fi
+
     rm -f "$APPIMAGE_OUTPUT"
-    ARCH="$APPIMAGE_ARCH" "$TOOL_BIN" --appimage-extract-and-run "$APP_DIR" "$APPIMAGE_OUTPUT"
+    ARCH="$APPIMAGE_ARCH" "$TOOL_BIN" --appimage-extract-and-run --runtime-file "$RUNTIME_BIN" "$APP_DIR" "$APPIMAGE_OUTPUT"
     chmod +x "$APPIMAGE_OUTPUT"
 
     echo "=========================================================="
@@ -256,7 +261,7 @@ do_uninstall() {
     sudo rm -rf "/opt/$APP_NAME" "/usr/bin/$APP_NAME" "/usr/share/applications/$APP_NAME.desktop" "/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png" "/root/rapx-build"
     rm -rf "$HOME/rapx-build" "$HOME/rapx" "$HOME/.config/openra" "$HOME/.local/share/openra"
     sudo update-desktop-database /usr/share/applications 2>/dev/null || true
-    echo "[OK] Da go bo sach se!"
+    echo "[OK] Da go bo sach se! (Cac file goi trong $OUT_DIR duoc giu lai)"
 }
 
 while true; do
@@ -264,37 +269,40 @@ while true; do
     echo "=========================================================="
     echo "   RAPX UNIVERSAL MANAGER - $APP_TITLE"
     echo "   User: $USER | Thu muc xuat goi: $OUT_DIR"
-echo "=========================================================="
-echo "  1) Cai dat vao may + Xuat goi .deb & .AppImage"
-echo "  2) Chi bien dich & Xuat goi .deb + .AppImage"
-echo "  3) Go bo hoan toan game khoi may"
-echo "  4) Thoat"
-echo "=========================================================="
-read -rp "Nhap lua chon cua ban [1-4]: " CHOICE
-echo ""
-case "$CHOICE" in
-1)
-build_source
-package_and_install_system "yes"
-package_appimage
-read -rp "Nhan Enter de quay lai Menu..."
-;;
-2)
-build_source
-package_and_install_system "no"
-package_appimage
-read -rp "Nhan Enter de quay lai Menu..."
-;;
-3)
-do_uninstall
-read -rp "Nhan Enter de quay lai Menu..."
-;;
-4)
-exit 0
-;;
-*)
-echo "[LOI] Lua chon khong hop le."
-sleep 1
-;;
-esac
+    echo "=========================================================="
+    echo "  1) Cai dat vao may + Xuat goi .deb & .AppImage"
+    echo "  2) Chi bien dich & Xuat goi .deb + .AppImage"
+    echo "  3) Go bo hoan toan game khoi may"
+    echo "  4) Thoat"
+    echo "=========================================================="
+    read -rp "Nhap lua chon cua ban [1-4]: " CHOICE
+    echo ""
+    case "$CHOICE" in
+        1)
+            build_source
+            package_and_install_system "yes"
+            package_appimage
+            read -rp "Nhan Enter de quay lai Menu..."
+            ;;
+        2)
+            build_source
+            package_and_install_system "no"
+            package_appimage
+            read -rp "Nhan Enter de quay lai Menu..."
+            ;;
+        3)
+            do_uninstall
+            read -rp "Nhan Enter de quay lai Menu..."
+            ;;
+        4)
+            exit 0
+            ;;
+        *)
+            echo "[LOI] Lua chon khong hop le."
+            sleep 1
+            ;;
+    esac
 done
+EOF
+
+chmod +x ~/rapx-manager.sh && ~/rapx-manager.sh
