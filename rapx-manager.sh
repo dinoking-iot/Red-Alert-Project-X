@@ -115,6 +115,16 @@ build_source() {
     cd "$SRC_DIR"
     make
 }
+
+find_best_icon() {
+    # Uu tien tim file icon/logo/rapx PNG co dung luong lon nhat (tranh trung icon 16x16)
+    local BEST_ICON
+    BEST_ICON=$(find "$SRC_DIR" -type f \( -iname "*icon*.png" -o -iname "*logo*.png" -o -iname "*rapx*.png" \) -exec ls -S {} + 2>/dev/null | head -n 1)
+    if [ -z "$BEST_ICON" ]; then
+        BEST_ICON=$(find "$SRC_DIR" -type f -iname "*.png" -exec ls -S {} + 2>/dev/null | head -n 1)
+    fi
+    echo "$BEST_ICON"
+}
 EOF
 cat << 'EOF' >> ~/rapx-manager.sh
 
@@ -131,8 +141,8 @@ exec ./launch-game.sh "$@"
 LAUNCHER
     chmod +x "$PKG_DIR/usr/bin/rapx"
 
-    ICON_PATH=$(find "$SRC_DIR" -iname "*icon*.png" -o -iname "*logo*.png" | head -n 1)
-    [ -n "$ICON_PATH" ] && cp "$ICON_PATH" "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png"
+    ICON_PATH=$(find_best_icon)
+    [ -n "$ICON_PATH" ] && cp -f "$ICON_PATH" "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png"
 
     cat << DESKTOP > "$PKG_DIR/usr/share/applications/$APP_NAME.desktop"
 [Desktop Entry]
@@ -175,9 +185,11 @@ CONTROL
             sudo cp -r "$PKG_DIR/opt/$APP_NAME" /opt/
             sudo cp "$PKG_DIR/usr/bin/rapx" /usr/bin/
             sudo cp "$PKG_DIR/usr/share/applications/$APP_NAME.desktop" /usr/share/applications/
-            [ -f "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png" ] && sudo cp "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png" /usr/share/icons/hicolor/256x256/apps/
+            [ -f "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png" ] && sudo cp -f "$PKG_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png" /usr/share/icons/hicolor/256x256/apps/
             sudo update-desktop-database /usr/share/applications 2>/dev/null || true
         fi
+        rm -f "$HOME/.cache/icon-cache.kcache"
+        kbuildsycoca6 --noincremental 2>/dev/null || kbuildsycoca5 --noincremental 2>/dev/null || true
         echo "[OK] Installed successfully / Da cai dat hoan chinh vao may!"
     fi
 }
@@ -185,7 +197,12 @@ CONTROL
 package_appimage() {
     echo "[*] Packaging AppImage / Dang dong goi file AppImage..."
     rm -rf "$APP_DIR"
-    mkdir -p "$APP_DIR/usr/share/$APP_NAME" "$APP_DIR/usr/share/dotnet" "$APP_DIR/usr/lib"
+    mkdir -p "$APP_DIR/usr/share/$APP_NAME" \
+             "$APP_DIR/usr/share/dotnet" \
+             "$APP_DIR/usr/lib" \
+             "$APP_DIR/usr/share/icons/hicolor/256x256/apps" \
+             "$APP_DIR/usr/share/applications"
+
     rsync -a "$SRC_DIR/" "$APP_DIR/usr/share/$APP_NAME/"
 
     DOTNET_BIN=$(readlink -f "$(command -v dotnet)")
@@ -225,13 +242,17 @@ Type=Application
 Categories=Game;StrategyGame;
 DESKTOP
 
-    ICON_PATH=$(find "$SRC_DIR" -iname "*icon*.png" -o -iname "*logo*.png" | head -n 1)
+    ICON_PATH=$(find_best_icon)
     if [ -n "$ICON_PATH" ]; then
-        cp "$ICON_PATH" "$APP_DIR/$APP_NAME.png"
-        ln -sf "$APP_NAME.png" "$APP_DIR/.DirIcon"
+        cp -f "$ICON_PATH" "$APP_DIR/$APP_NAME.png"
     else
         printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82' > "$APP_DIR/$APP_NAME.png"
     fi
+
+    # Chep ban thuc cho .DirIcon va chuan thu muc icon Freedesktop trong AppDir
+    cp -f "$APP_DIR/$APP_NAME.png" "$APP_DIR/.DirIcon"
+    cp -f "$APP_DIR/$APP_NAME.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png"
+    cp -f "$APP_DIR/$APP_NAME.desktop" "$APP_DIR/usr/share/applications/$APP_NAME.desktop"
 
     TOOL_BIN="$WORK_DIR/appimagetool-${APPIMAGE_ARCH}.AppImage"
     if [ ! -f "$TOOL_BIN" ]; then
@@ -250,6 +271,9 @@ DESKTOP
     ARCH="$APPIMAGE_ARCH" "$TOOL_BIN" --appimage-extract-and-run --runtime-file "$RUNTIME_BIN" "$APP_DIR" "$APPIMAGE_OUTPUT"
     chmod +x "$APPIMAGE_OUTPUT"
 
+    rm -f "$HOME/.cache/icon-cache.kcache"
+    kbuildsycoca6 --noincremental 2>/dev/null || kbuildsycoca5 --noincremental 2>/dev/null || true
+
     echo "=================================================================="
     echo "[SUCCESS / THANH CONG] Packages saved at / Cac goi da luu tai:"
     echo " -> $OUT_DIR"
@@ -264,8 +288,9 @@ do_uninstall() {
         sudo apt-get remove --purge -y "$APP_NAME"
     fi
     sudo rm -rf "/opt/$APP_NAME" "/usr/bin/$APP_NAME" "/usr/share/applications/$APP_NAME.desktop" "/usr/share/icons/hicolor/256x256/apps/$APP_NAME.png" "/root/rapx-build"
-    rm -rf "$HOME/rapx-build" "$HOME/rapx" "$HOME/.config/openra" "$HOME/.local/share/openra"
+    rm -rf "$HOME/rapx-build" "$HOME/rapx" "$HOME/.config/openra" "$HOME/.local/share/openra" "$HOME/.cache/icon-cache.kcache"
     sudo update-desktop-database /usr/share/applications 2>/dev/null || true
+    kbuildsycoca6 --noincremental 2>/dev/null || kbuildsycoca5 --noincremental 2>/dev/null || true
     echo "[OK] Uninstalled cleanly! / Da go bo sach se!"
     echo "     (Packages in $OUT_DIR are kept / Cac file goi trong $OUT_DIR duoc giu lai)"
 }
