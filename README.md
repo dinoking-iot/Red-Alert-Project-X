@@ -21,8 +21,10 @@ Chọn phe phái của bạn giữa The Union (Mỹ, Anh, Pháp, Đức, Nhật,
 💯 100% FREE & OFFLINE-READY: No original game files required. Play against brutal AI or multiplayer across 80+ maps by installing the .NET 6 SDK and building from the repository.
 MIỄN PHÍ 100% & HỖ TRỢ OFFLINE: Không cần file game gốc. Đấu với AI thông minh hoặc chơi mạng trên hơn 80 bản đồ chỉ với .NET 6 SDK và mã nguồn dự án.
 
-👉 Download & Play / Tải và trải nghiệm ngay: https://github.com/heshamhabib/rapx
+👉 Download & Play / Tải và trải nghiệm
+ngay: https://github.com/heshamhabib/rapx
 
 If you find the installation process difficult, please follow the instructions below; we have written a script to make the installation easier for you on Linux. Nếu bạn thấy quá trình cài đặt khó khăn, vui lòng làm theo các hướng dẫn dưới đây; chúng tôi đã soạn sẵn một tập lệnh (script) để giúp việc cài đặt trên Linux trở nên dễ dàng hơn đối với bạn.
 
-👉Download  https://github.com/dinoking-iot/Red-Alert-Project-X/releases/tag/Rapxhd
+👉Download  
+https://github.com/dinoking-iot/Red-Alert-Project-X/releases/tag/Rapxhd
